@@ -1,9 +1,10 @@
 pub mod input;
 
-use azalea_protocol::packets::game::ServerboundGamePacket;
-use input::InputState;
 use std::sync::Arc;
 use std::time::Instant;
+
+use azalea_protocol::packets::game::ServerboundGamePacket;
+use input::InputState;
 use thiserror::Error;
 use winit::application::ApplicationHandler;
 use winit::event::{DeviceEvent, DeviceId, WindowEvent};
@@ -23,11 +24,11 @@ use crate::renderer::chunk::mesher::MeshDispatcher;
 use crate::renderer::pipelines::entity_renderer::EntityRenderInfo;
 use crate::renderer::pipelines::menu_overlay::MenuElement;
 use crate::ui::chat::ChatState;
-use crate::ui::common::{self, WHITE};
-use crate::ui::death::{self, DeathAction};
-use crate::ui::hud;
+use crate::ui::common::WHITE;
+use crate::ui::death::DeathAction;
 use crate::ui::menu::{MainMenu, MenuAction, MenuInput, PanoramaTheme};
-use crate::ui::pause::{self, PauseAction};
+use crate::ui::pause::PauseAction;
+use crate::ui::{common, death, hud, pause};
 use crate::world::chunk::ChunkStore;
 
 #[derive(Error, Debug)]
