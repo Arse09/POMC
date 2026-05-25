@@ -37,6 +37,8 @@ use winit::window::Window;
 
 use crate::app::input::InputState;
 use crate::assets::AssetIndex;
+use crate::entity::components::{LookDirection, Position};
+use crate::player::interaction::raycast;
 use crate::renderer::pipelines::chunk_borders::ChunkBorderPipeline;
 use crate::renderer::pipelines::item_entity::ItemEntityPipeline;
 use crate::world::block::registry::BlockRegistry;
@@ -557,65 +559,42 @@ impl Renderer {
         self.camera.update_look(input);
     }
 
-    pub fn sync_camera_to_player(&mut self, eye_pos: glam::DVec3, yaw: f32, pitch: f32) {
-        self.camera.set_position_f64(eye_pos);
-        self.camera.yaw = yaw;
-        self.camera.pitch = pitch;
+    pub fn sync_camera_pos(&mut self, position: Position) {
+        self.camera.sync_pos(position);
+    }
+
+    pub fn reset_camera(&mut self, position: Position, look_dir: LookDirection) {
+        self.camera.reset(position, look_dir);
     }
 
     pub fn update_third_person_distance(
         &mut self,
-        eye_pos: glam::Vec3,
+        eye_pos: Position,
         chunks: &crate::world::chunk::ChunkStore,
     ) {
         if self.camera.mode == camera::CameraMode::FirstPerson {
             return;
         }
-        let max = camera::THIRD_PERSON_DISTANCE;
-        let fwd = self.camera.forward_vec();
+        let max = camera::THIRD_PERSON_DISTANCE as f64;
+        let fwd = self.camera.look_dir.as_vec().as_dvec3();
         let dir = if self.camera.mode == camera::CameraMode::ThirdPersonFront {
             fwd
         } else {
             -fwd
         };
-        let mut dist = max;
 
-        let m = 0.4;
-        let corners = [
-            glam::Vec3::new(m, m, m),
-            glam::Vec3::new(m, m, -m),
-            glam::Vec3::new(m, -m, m),
-            glam::Vec3::new(m, -m, -m),
-            glam::Vec3::new(-m, m, m),
-            glam::Vec3::new(-m, m, -m),
-            glam::Vec3::new(-m, -m, m),
-            glam::Vec3::new(-m, -m, -m),
-        ];
-
-        let step = 0.2;
-        let mut t = step;
-        while t <= max {
-            let p = eye_pos + dir * t;
-            let hit = corners.iter().any(|off| {
-                let check = p + *off;
-                let state = chunks.get_block_state(
-                    check.x.floor() as i32,
-                    check.y.floor() as i32,
-                    check.z.floor() as i32,
-                );
-                self.registry.is_opaque_full_cube(state)
-            });
-            if hit {
-                dist = (t - 0.3).max(0.5);
-                break;
-            }
-            t += step;
-        }
-
-        self.camera.third_person_dist = dist.max(0.5);
+        let dist = raycast(
+            eye_pos.into(),
+            dir.as_vec3(),
+            camera::THIRD_PERSON_DISTANCE,
+            chunks,
+        )
+        .map(|hit| hit.hit_point.distance(eye_pos.into()))
+        .unwrap_or(max);
+        self.camera.third_person_dist = (dist - 0.3).max(0.5) as f32;
     }
 
-    pub fn update_fov(&mut self, modifier: f32) {
+    pub fn update_fov_mod(&mut self, modifier: f32) {
         self.camera.update_fov_modifier(modifier);
     }
 
@@ -623,12 +602,12 @@ impl Renderer {
         self.camera.base_fov_degrees = degrees;
     }
 
-    pub fn camera_yaw(&self) -> f32 {
-        self.camera.yaw
+    pub fn camera_look_dir(&self) -> LookDirection {
+        self.camera.look_dir
     }
 
-    pub fn camera_pitch(&self) -> f32 {
-        self.camera.pitch
+    pub fn camera_pivot_position(&self) -> Position {
+        self.camera.position
     }
 
     pub fn cycle_camera_mode(&mut self) {
@@ -649,12 +628,6 @@ impl Renderer {
 
     pub fn loaded_chunk_count(&self) -> u32 {
         self.chunk_buffers.chunk_count()
-    }
-
-    pub fn set_camera_position(&mut self, x: f64, y: f64, z: f64, yaw: f32, pitch: f32) {
-        self.camera
-            .set_position(glam::Vec3::new(x as f32, y as f32, z as f32), yaw, pitch);
-        self.camera.position_f64 = glam::DVec3::new(x, y, z);
     }
 
     pub fn wait_for_all_frames(&self) {
@@ -705,9 +678,8 @@ impl Renderer {
         )
     }
 
-    #[allow(clippy::too_many_arguments)]
     pub fn update_chunk_borders(&mut self, min_y: i32, max_y: i32) {
-        let cam = self.camera.position;
+        let cam = self.camera.position.as_vec3();
         self.chunk_border_pipeline
             .update_lines(cam.x, cam.y, cam.z, min_y, max_y);
     }
@@ -952,11 +924,7 @@ impl Renderer {
 
         if matches!(&mode, RenderMode::World { .. }) {
             let frustum = self.camera.frustum_planes();
-            let cam_pos = [
-                self.camera.position.x,
-                self.camera.position.y,
-                self.camera.position.z,
-            ];
+            let cam_pos = self.camera.position.as_vec3().into();
             self.chunk_buffers
                 .dispatch_cull(cmd, frame, &frustum, cam_pos);
         }
