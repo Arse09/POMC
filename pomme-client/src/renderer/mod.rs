@@ -19,6 +19,7 @@ use chunk::atlas::TextureAtlas;
 use chunk::buffer::ChunkBufferStore;
 use chunk::mesher::{ChunkMeshData, MeshDispatcher};
 use context::VulkanContext;
+use glam::dvec3;
 use pipelines::block_overlay::BlockOverlayPipeline;
 use pipelines::blur::BlurPipeline;
 use pipelines::chunk::ChunkPipeline;
@@ -38,7 +39,6 @@ use winit::window::Window;
 use crate::app::input::InputState;
 use crate::assets::AssetIndex;
 use crate::entity::components::{LookDirection, Position};
-use crate::player::interaction::raycast;
 use crate::renderer::pipelines::chunk_borders::ChunkBorderPipeline;
 use crate::renderer::pipelines::item_entity::ItemEntityPipeline;
 use crate::world::block::registry::BlockRegistry;
@@ -583,15 +583,41 @@ impl Renderer {
             -fwd
         };
 
-        let dist = raycast(
-            eye_pos.into(),
-            dir.as_vec3(),
-            camera::THIRD_PERSON_DISTANCE,
-            chunks,
-        )
-        .map(|hit| hit.hit_point.distance(eye_pos.into()))
-        .unwrap_or(max);
-        self.camera.third_person_dist = (dist - 0.3).max(0.5) as f32;
+        let mut dist = max;
+
+        let m = 0.4;
+        let corners = [
+            dvec3(m, m, m),
+            dvec3(m, m, -m),
+            dvec3(m, -m, m),
+            dvec3(m, -m, -m),
+            dvec3(-m, m, m),
+            dvec3(-m, m, -m),
+            dvec3(-m, -m, m),
+            dvec3(-m, -m, -m),
+        ];
+
+        let step = 0.2;
+        let mut t = step;
+        while t <= max {
+            let p = eye_pos + dir * t;
+            let hit = corners.iter().any(|off| {
+                let check = p + *off;
+                let state = chunks.get_block_state(
+                    check.x.floor() as i32,
+                    check.y.floor() as i32,
+                    check.z.floor() as i32,
+                );
+                self.registry.is_opaque_full_cube(state)
+            });
+            if hit {
+                dist = (t - 0.3).max(0.5);
+                break;
+            }
+            t += step;
+        }
+
+        self.camera.third_person_dist = dist.max(0.5) as f32;
     }
 
     pub fn update_fov_mod(&mut self, modifier: f32) {

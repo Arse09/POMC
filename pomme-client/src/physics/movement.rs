@@ -146,7 +146,7 @@ fn tick_water(
     if player.swimming {
         let x_rot_y = player.look_dir.x_rot_rad().sin() as f64;
         let boost = if x_rot_y < -0.2 { 0.085 } else { 0.06 };
-        player.velocity.y += (x_rot_y - player.velocity.y) * boost;
+        player.velocity.y -= (x_rot_y - player.velocity.y) * boost;
     }
 
     apply_collision(player, chunk_store, forward, strafe, sin_y_rot, cos_y_rot);

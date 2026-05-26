@@ -746,7 +746,7 @@ pub fn compute_humanoid_anim(
         let rot = match part.name.as_str() {
             "head" => {
                 let rot = Quat::from_rotation_y(local_head_y_rot_deg.to_radians())
-                    * Quat::from_rotation_x(-head_x_rot_deg.to_radians());
+                    * Quat::from_rotation_x(head_x_rot_deg.to_radians());
                 let (x, y, z) = rot.to_euler(glam::EulerRot::XYZ);
                 Vec3::new(x, y, z)
             }
@@ -786,7 +786,9 @@ pub fn compute_quadruped_anim(
             "head" => {
                 let rot = Quat::from_rotation_y(local_head_y_rot_deg.to_radians())
                     * Quat::from_rotation_x(
-                        -(head_x_rot_deg_override.unwrap_or(head_x_rot_deg)).to_radians(),
+                        head_x_rot_deg_override
+                            .unwrap_or(head_x_rot_deg)
+                            .to_radians(),
                     );
                 let (x, y, z) = rot.to_euler(glam::EulerRot::XYZ);
                 Vec3::new(x, y, z)

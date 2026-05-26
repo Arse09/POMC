@@ -67,9 +67,9 @@ impl Sub<Position> for Position {
     }
 }
 
-impl SubAssign<Position> for Position {
-    fn sub_assign(&mut self, rhs: Position) {
-        self.0 -= rhs.0
+impl SubAssign<DVec3> for Position {
+    fn sub_assign(&mut self, rhs: DVec3) {
+        self.0 -= rhs
     }
 }
 

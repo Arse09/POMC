@@ -83,7 +83,7 @@ fn sweep_axis_y(
 }
 
 fn sweep_axis_x(
-    pos: &mut DVec3,
+    pos: &mut Position,
     dx: f64,
     half_w: f64,
     height: f64,
@@ -118,7 +118,7 @@ fn sweep_axis_x(
 }
 
 fn sweep_axis_z(
-    pos: &mut DVec3,
+    pos: &mut Position,
     dz: f64,
     half_w: f64,
     height: f64,
@@ -182,8 +182,6 @@ pub struct LivingEntity {
     interp_steps: i32,
     interp_head_y_rot_deg: f32,
     interp_head_y_rot_steps: i32,
-    interp_body_y_rot_deg: f32,
-    interp_body_y_rot_steps: i32,
 }
 
 impl LivingEntity {
@@ -221,8 +219,6 @@ impl LivingEntity {
             interp_steps: 0,
             interp_head_y_rot_deg: head_y_rot_deg,
             interp_head_y_rot_steps: 0,
-            interp_body_y_rot_deg: body_y_rot_deg,
-            interp_body_y_rot_steps: 0,
         }
     }
 
@@ -261,14 +257,6 @@ impl LivingEntity {
         }
 
         self.prev_body_y_rot_deg = self.body_y_rot_deg;
-        if self.interp_body_y_rot_steps > 0 {
-            self.body_y_rot_deg = lerp_angle(
-                self.body_y_rot_deg,
-                self.interp_body_y_rot_deg,
-                1.0 / self.interp_body_y_rot_steps as f32,
-            );
-            self.interp_body_y_rot_steps -= 1;
-        }
     }
 
     pub fn tick_body_rotation(&mut self) {
@@ -276,16 +264,19 @@ impl LivingEntity {
         let dz = self.position.z - self.prev_position.z;
         let dist_sq = (dx * dx + dz * dz) as f32;
 
-        let body_target = if dist_sq > 0.0025 {
-            -(dx as f32).atan2(dz as f32).to_degrees()
-        } else {
-            self.look_dir.y_rot_deg()
-        };
+        if dist_sq > 0.0025 {
+            let walk_dir = -(dx as f32).atan2(dz as f32).to_degrees();
+            let diff_from_look = wrap_degrees(self.look_dir.y_rot_deg() - walk_dir).abs();
+            let body_target = if diff_from_look > 95.0 && diff_from_look < 265.0 {
+                walk_dir - 180.0
+            } else {
+                walk_dir
+            };
+            let diff = wrap_degrees(body_target - self.body_y_rot_deg);
+            self.body_y_rot_deg += diff * 0.3;
+        }
 
-        let diff = wrap_degrees(body_target - self.body_y_rot_deg);
-        self.body_y_rot_deg += diff * 0.3;
-
-        let head_diff = wrap_degrees(self.look_dir.y_rot_deg() - self.body_y_rot_deg);
+        let head_diff = wrap_degrees(self.head_y_rot_deg - self.body_y_rot_deg);
         if head_diff.abs() > 50.0 {
             self.body_y_rot_deg += head_diff - head_diff.signum() * 50.0;
         }

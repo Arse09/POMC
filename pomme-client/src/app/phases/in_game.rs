@@ -5,6 +5,7 @@ use std::time::Instant;
 use azalea_core::position::ChunkPos;
 use azalea_protocol::packets::game::{ServerboundClientInformation, ServerboundGamePacket};
 use azalea_registry::builtin::EntityKind;
+use glam::FloatExt as _;
 
 use crate::app::core::{AppCore, PlayerInputState};
 use crate::app::phases::Gfx;
@@ -468,12 +469,9 @@ pub fn update_game(
         gfx.renderer.menu_text_width(t, s)
     });
 
-    let swing_progress = game
-        .interaction
-        .get_swing_progress(core.tick_accumulator / TICK_RATE);
+    let swing_progress = game.interaction.get_swing_progress(partial_tick);
     let destroy_info = game.interaction.destroy_stage();
 
-    let partial_tick = core.tick_accumulator / TICK_RATE;
     let mut entity_renders: Vec<EntityRenderInfo> = game
         .entity_store
         .living
@@ -484,9 +482,12 @@ pub fn update_game(
 
             EntityRenderInfo {
                 position: interp_pos,
-                head_y_rot_deg: e.head_y_rot_deg,
-                head_x_rot_deg: e.look_dir.x_rot_deg(),
-                body_y_rot_deg: e.body_y_rot_deg,
+                head_y_rot_deg: lerp_angle(e.prev_head_y_rot_deg, e.head_y_rot_deg, partial_tick),
+                head_x_rot_deg: e
+                    .prev_look_dir
+                    .x_rot_deg()
+                    .lerp(e.look_dir.x_rot_deg(), partial_tick),
+                body_y_rot_deg: lerp_angle(e.prev_body_y_rot_deg, e.body_y_rot_deg, partial_tick),
                 is_baby: e.is_baby,
                 walk_anim_pos: {
                     let scale = if e.is_baby { 3.0 } else { 1.0 };

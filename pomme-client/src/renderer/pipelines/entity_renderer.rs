@@ -471,7 +471,7 @@ impl EntityRenderer {
             let anim = match entry.anim {
                 AnimationType::Quadruped => entity_model::compute_quadruped_anim(
                     &variant.model,
-                    -info.head_x_rot_deg,
+                    info.head_x_rot_deg,
                     info.head_y_rot_deg - info.body_y_rot_deg,
                     info.walk_anim_pos,
                     info.walk_anim_speed,
@@ -480,7 +480,7 @@ impl EntityRenderer {
                 ),
                 AnimationType::Humanoid => entity_model::compute_humanoid_anim(
                     &variant.model,
-                    -info.head_x_rot_deg,
+                    info.head_x_rot_deg,
                     info.head_y_rot_deg - info.body_y_rot_deg,
                     info.walk_anim_pos,
                     info.walk_anim_speed,
