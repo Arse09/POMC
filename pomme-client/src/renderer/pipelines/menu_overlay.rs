@@ -1385,6 +1385,8 @@ pub enum SpriteId {
     Incompatible,
     Unreachable,
     SteveHead,
+
+    PowderedSnowOutline,
 }
 
 struct SpriteRegion {
@@ -1697,6 +1699,11 @@ fn build_sprite_atlas(
         (
             SpriteId::Unreachable,
             "minecraft/textures/gui/sprites/server_list/unreachable.png",
+            0.0,
+        ),
+        (
+            SpriteId::Unreachable,
+            "minecraft/textures/misc/powder_snow_outline.png",
             0.0,
         ),
     ];

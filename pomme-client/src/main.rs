@@ -5,6 +5,7 @@ mod benchmark;
 mod dirs;
 mod discord;
 mod entity;
+mod gui;
 mod logging;
 mod net;
 mod physics;
